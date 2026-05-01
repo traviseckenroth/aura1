@@ -1,24 +1,37 @@
-import whisper
+from app.services.vision_encoder import vision_encoder
 from app.services.memory_store import memory_store
+import io
 
-def forge_persona(user_id, bio_text=None, media_path=None, drive_files=None):
-    """
-    Requirement #2: Capture text, audio, video, and Drive repos.
-    """
-    # 1. Text Bio
-    if bio_text:
-        memory_store.upsert_memory(user_id, "bio_text", bio_text)
+class VisualIdentityIngestor:
+    def __init__(self, user_id):
+        self.user_id = user_id
 
-    # 2. Audio/Video Bio (Whisper Transcription)
-    if media_path:
-        model = whisper.load_model("base")
-        transcript = model.transcribe(media_path)["text"]
-        memory_store.upsert_memory(user_id, "vocal_bio", transcript)
+    def process_drive_images(self, image_streams):
+        """
+        Requirement #2: Extracting visual DNA from Google Drive.
+        Scans personal photos to understand the user's fashion and lifestyle.
+        """
+        visual_traits = []
+        
+        for img_data in image_streams:
+            # Use CLIP to get a description of the user's visual style
+            # This identifies 'edgy tailoring', 'military backgrounds', etc.
+            aesthetic_summary = vision_encoder.describe_visual_style(img_data)
+            visual_traits.append(aesthetic_summary)
+        
+        # Aggregate the visual traits into a coherent 'Identity Summary'
+        # e.g., "The user consistently wears relaxed, edgy tailoring and prefers urban settings."
+        final_identity = self._synthesize_visual_traits(visual_traits)
+        
+        # Store this in the Vector DB so the Twin can use it in conversation
+        memory_store.upsert_memory(
+            self.user_id, 
+            "visual_identity", 
+            f"Visual Style Summary: {final_identity}"
+        )
+        print(f"[FORGE] Visual Identity integrated for {self.user_id}.")
 
-    # 3. Google Drive Deep-Dive (Texts/Chat Logs)
-    if drive_files:
-        # drive_files would be a list of strings extracted via Google API
-        combined_logs = " ".join(drive_files)
-        memory_store.upsert_memory(user_id, "historical_data", combined_logs)
-    
-    print(f"[SYSTEM] Digital Twin for {user_id} is now forged.")
+    def _synthesize_visual_traits(self, traits):
+        # Logic to find common denominators in the visual data
+        # For now, it compiles them into a descriptive block for the LLM
+        return " ".join(set(traits))

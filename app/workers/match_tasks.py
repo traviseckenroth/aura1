@@ -3,6 +3,10 @@ import json
 from app.services.memory_store import memory_store
 from app.services.llm_inference import twin_engine
 from app.services.vision_encoder import vision_encoder
+from app.workers.celery_app import celery_instance
+from app.services.llm_inference import twin_engine
+from app.services.vision_encoder import vision_encoder
+import json
 
 # Initialize Celery
 celery_app = Celery('match_tasks', broker='redis://localhost:6379/0')
@@ -43,6 +47,7 @@ class MatchmakingArena:
 
 @celery_app.task
 def run_overnight_batch(user_id):
+    print(f"[ARENA] Initiating overnight simulations for {user_id}...")
     """The main task triggered by the overnight scheduler."""
     arena = MatchmakingArena()
     matches = []
